@@ -1,5 +1,5 @@
 export interface PostDto { // 게시글의 타입을 인터페이스로 정의
-    id: string;
+    id: number;
     title: string;
     content: string;
     name: string;

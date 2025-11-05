@@ -1,14 +1,20 @@
 import { PostDto } from './blog.model'; // 게시글의 타입 정보 임포트
-import { BlogFileRepository, BlogRepository } from './blog.repository'; // 리포지토리 클래스와 인터페이스 임포트
+import { BlogFileRepository, BlogRepository, BlogDbRepository } from './blog.repository'; // 리포지토리 클래스와 인터페이스 임포트
+import { BlogMongoRepository } from './blog.repository';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class BlogService {
 
-    blogRepository: BlogRepository;
+    // blogRepository: BlogRepository;
 
-    // 블로그 리포지토리 객체 생성
-    constructor() {
-        this.blogRepository = new BlogFileRepository();
-    }
+    // // 블로그 리포지토리 객체 생성
+    // constructor() {
+    //     this.blogRepository = new BlogFileRepository();
+    // }
+
+    // 생성자를 통한 의존성 주입
+    constructor(private blogRepository: BlogDbRepository) { }
 
     // 모든 게시글 가져오기
     async getAllPosts() {

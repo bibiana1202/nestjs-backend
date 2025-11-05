@@ -4,11 +4,14 @@ import { BlogService } from './blog.service'; // 블로그 서비스 임포트
 
 @Controller('blog') // 클래스에 붙이는 Controller 데코레이터
 export class BlogController {
-    blogService: BlogService;
+    // blogService: BlogService;
 
-    constructor() {
-        this.blogService = new BlogService(); // 생성자에서 블로그 서비스 생성
-    }
+    // constructor() {
+    //     this.blogService = new BlogService(); // 생성자에서 블로그 서비스 생성
+    // }
+
+    // BlogService 주입
+    constructor(private blogService: BlogService) { };
 
     // GET 요청 처리
     @Get()
@@ -27,7 +30,7 @@ export class BlogController {
 
     // GET에 URL 매개변수에 id가 있는 요청 처리
     @Get('/:id')
-    async getPost(@Param('id') id: string) { // 비동기를 지원하는 메서드로 시그니처 변경
+    async getPost(@Param('id') id: number) { // 비동기를 지원하는 메서드로 시그니처 변경
         console.log(`[id ${id}] 게시글 하나 가져오기`);
 
         // 블로그 서비스에서 사용하는 메서드가 비동기로 변경되었으므로 await 사용
@@ -38,7 +41,7 @@ export class BlogController {
 
     // DELETE 방식에 URL 매개변수로 id가 있는 요청 처리
     @Delete('/:id')
-    deletePost(@Param('id') id: string) {
+    deletePost(@Param('id') id: number) {
         console.log('게시글 삭제');
         this.blogService.delete(id);
         return 'success';
@@ -46,7 +49,7 @@ export class BlogController {
 
     // PUT 방식에 URL 매개변수로 전달된 id가 있는 요청 처리
     @Put('/:id')
-    updatePost(@Param('id') id: string, @Body() postDto) {
+    updatePost(@Param('id') id: number, @Body() postDto) {
         console.log(`[${id}] 게시글 업데이트`, id, postDto);
         return this.blogService.updatePost(id, postDto);
     }
