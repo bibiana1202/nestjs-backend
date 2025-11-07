@@ -42,6 +42,7 @@ export class AuthService {
         const { password: hashedPassword, ...userInfo } = user;
         // 패스워드 따로 뽑아냄
         if (bcrypt.compareSync(password, hashedPassword)) { // 패스워드 일치하면 성공
+            console.log('패스워드 일치');
             return userInfo;
         }
         return null;

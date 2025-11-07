@@ -119,3 +119,107 @@
 
 9.11 main.ts에서 환경 변수 사용하기
 - main.ts는 서버 기동 시 가장 먼저 실행되는 파일 입니다. 가장 먼저 실행되므로 해당 파일에서 NestFactory.create()를 호출해주기 전에는 ConfigModule이 활성화 되지 않습니다. 또한 클래스가 아니라 bootstrap()함수만 있으므로 기존처럼 클래스의 생성자로 의존성 주입을 받을 수 없어, 다른 방법으로 ConfigService를 사용해야 합니다. main.ts에서는 configService 인스턴스를 주입받을 수는 없으므로 app.get()메서드에 ConfigService 클래스를 인수로 주고, 반환값으로 받는 방식을 사용합니다.
+
+---
+10장 회원 가입과 인증하기
+
+10.1 실습용 프로젝트 설정하기
+
+10.2 유저 모듈의 엔티티,서비스,컨트롤러 생성하기
+
+10.3 파이프로 유효성 검증하기
+- 익스프레스 에서는 컨트롤러 역할을 하는 곳 또는 별도의 라이브러리를 사용해 검증합니다만, NestJS에서는 파이프를 사용해서 유효성 검증을 합니다.
+- ValidationPipe 
+  - class-validator : 데코레이터를 사용해 간편하게 유효성 검증을 하는 라이브러리
+  - class-transformer : JSON 정보를 클래스 객체로 변경합니다. 받은 요청을 변환한 클래스가 컨트롤러의 핸들러 메서드의 매개변수에 선언되어 있는 클래스와 같다면 유효성 검증을 합니다.
+
+10.3.1 전역 ValidationPipe 설정하기
+```ts
+    import {ValidationPipe} from '@nestjs/common';
+
+    app.useGlobalPipes(new ValidationPipe()); // 전역 파이프에 validationPipe 객체 추가
+```
+
+10.3.2 UserDto 만들기
+```ts
+    import {IsEmail,IsString} from 'class-validator';
+
+    @IsEmail()
+    @IsString()
+```
+
+10.4 인증 모듈 생성 및 회원 가입 하기
+- 인증을 만드는 2가지 : 쿠키를 기반으로 만들거나, 토큰 기반으로 만들기
+- 쿠키리스 : 쿠키가 없는 토큰 기반
+- 쿠키는 서버에서 보내준 쿠키를 클라이언트(주로 브라우저)에 저장해 관리
+- 토큰은 서버에 상태를 저장할 필요가 없다.
+
+10.5 쿠키를 사용한 인증 구현하기
+- AuthController에 login 핸들러 메서드가 필요합니다. 두번째로 AuthService에서 email,password를 넘겨주면 해당 정보의 유저가 있는지 유효성 검증을 하는 로직이 필요합니다. 유저 정보의 유효성 검증이 끝나면 응답값에 쿠키 정보를 추가해 반환합니다.
+- NestJS에서 인증을 구현할때 보통 인증용 미들웨어인 가드를 함께 사용합니다.
+- 가드는 특정 상황(권한,롤,액세스컨트롤)에서 받은 요청을 가드를 추가한 라우트 메서드에서 처리할지 말지를 결정하는 역할을 합니다.
+ 
+ 10.5.1 AuthService에 이메일과 패스워드 검증 로직 만들기
+ - 유저 정보가 있으면 res.cookie를 사용해서 쿠키를 설정해줍니다.
+ - httpOnly를 true로 설정하면 브라우저에서 쿠키를 읽지 못합니다. 브라우저에서 쿠키를 읽을 수 있다면 XSS(Cross Site Scripting)등의 공격으로 쿠키가 탈취되는 상황이 발생합니다.
+
+10.5.2 가드를 사용해 인증됐는지 검사하기
+- NestJS 에는 인증할 때 가드라는 미들웨어를 보편적으로 사용합니다.
+- 가드는 @Injectable() 데코레이터가 붙어있고 CanActivate 인터페이스를 구현한 클래스 입니다.
+- @UseGuard 데코레이터로 가드를 사용할 수 있습니다.
+- CanActivate 인터페이스를 구현하려면 canActivate() 메서드를 구현해야 합니다. canActivate() 메서드는 boolean 또는 Promise<boolean>을 반환하며 true인 경우 핸들러 메서드를 실행하고 false이면 403 Forbidden 에러를 줍니다.
+- npm install cookie-parser
+```ts
+    import cookieParser from 'cookie-parser';
+    app.use(cookieParser()); // 쿠키 파서 설정
+```
+- 주의할 점으로 가드 내에서 응답에 쿠키를 설정할 수 없습니다. 또한 가드는 모든 미들웨어의 실행이 끝난 다음 실행되면 filter나 pipe보다는 먼저 실행됩니다.
+
+10.6 패스포트와 세션을 사용한 인증 구현하기
+- 서버에서 인증하고 해당 정보를 서버의 특정 공간에 저장해두는것입니다. 이때 사용하는 것이 세션입니다.
+- 세션을 사용할때도 쿠키를 사용합니다만, 쿠키는 세션을 찾는 정보만 저장 하고, 중요 정보는 세션에 모두 넣는 것이 좋습ㄴ디ㅏ.
+- 세션은 서버의 자원을 사용하는 것이므로 서버에 부하를 주는 단점이 있습니다만, 위조,변조,탈취가 불가능하므로 보안적으로는 더 안전하다고 할수 있습니다.
+- 인증 로직 구현은 패스포트 라는 인증 로직 을 쉽게 불리해서 개발하는 라이브러리를 사용합니다.
+- 패스포트 사용시 인증 로직은 스트래티지 파일을 생성해서 사용합니다. 인증 로직 수행을 담당하는 클래스를 의미합니다.
+- 인증로직을 처리하는 별도의 스트래티지 파일이 필요합니다.
+- 세션을 사용시 세션에서 데이터를 읽어오고 저장하므로 세션에 데이터 저장하고 읽어올 세션 시리얼라이저 파일도 필요합니디.
+- 가드, 패스포트의 스트래티지, 세션 시리얼라이저가 서로 협력해서 사용자 신원을 확인하고, 인증 정보를 저장하고 읽어와서 다시 인증하는 작업을 합니다.
+
+10.6.1 라이브러리 설치 및 설정하기
+- passport-local : username과 password로 인증할수 있는 전략을 사용하는 모듈
+- express-session : 세션저장
+- @types/passport-local , @types/express-session : 타입스크립트의 타입 정보를 담고 있는 라이브러리
+
+10.6.2 로그인과 인증에 사용할 가드 구현하기
+- NestJS에서는 패스포트를 편하게 사용할수 있도록 @nestjs/passport를 제공 : 패스포트 인증에 가드를 사용할 수 있도록 감싸둔 AuthGuard를 제공하는 라이브러리 입니다.
+- 패스포트는 인증로직을 스트래티지라는 개념으로 구현합니다. id,password로 인증을 처리할때는 passport-local을 사용합니다. AuthGuard('local')은 로컬스트래티지를 사용합니다. 이외의 스트래티지로 passport-jwt와 passport-google-oauth20 등이 있습니다.
+- 가드를 사용하려면 canActivate를 구현해야 합니다. AuthGuard를 상속받았으니 super.canActivate()에서는 passport-local의 로직을 구현한 메서드를 실행합니다.local.strategy.ts 파일 LocalStrategy 클래스를 생성한후 validate()메서드를 구현
+- super.logIn()에서는 로그인 처리를 하는데, 여기서는 세션을 저장합니다. 세션을 저장하고 꺼내오는 방법은 session.serializer.ts 파일에 작성합니다.
+- AuthenticatedGuard는 로그인 후 인증이 되었는지 확인할때 사용합니다. 세션에 데이터를 저장하고 돌려주는 응답(response)값에 connect.sid라는 이름의 쿠키를 만들게 됩니다. 이후의 요청에 해당 쿠키값을 같이 전송하면 세션에 있는 값을 읽어서 인증 여부를 확일할때 사용하는 가드 입니다.
+
+10.6.3 세션에 정보를 저장하고 읽는 세션 시리얼라이저 구현하기
+- SessionSerializer는 PassportSerializer를 상속받습니다.
+  - serializeUser() : 세션에 정보를 저장합니다.
+  - deserializeUser() : 세션에서 가져온 정보로 유저 정보를 반환합니다.
+  - getPassportInstance() : 패스포트 인스턴스를 가져옵니다. 패스포트 인스턴스의 데이터가 필요한 경우 사용합니다.
+- 
+
+10.6.4 email,password 인증 로직이 있는 LocalStrategy 파일 작성하기
+- 인증 방법은 다양합니다. 다양한 방법을 패키지 하나에 담을 필요는 없기 때문에 패스포트에서는 이를 strategy라는 별개의 패키지로 모두 분리해서 담습니다.
+- 인증 유형별 스트래티지
+  - Local / passport-local : 유저명과 패스워드를 사용해 인증
+  - OAuth / passport-oauth : 페이스북, 구글, 트위터 등의 외부 서비스 에서 인증
+  - SAML / passport-saml : SAML 신원 제공자에서 인증, OneLogin,Okta 등
+  - JWT / passport-jwt : JSON Web Token을 사용해 인증
+  - AWS Cognito / passport-cognito : AWS의 Cognito user pool을 사용해 인증
+  - LDAP / passport-ldapauth : LDAP 디렉터리를 사용해 인증
+- PassportStrategy(Strategy)는 믹스인이라고 불리는 방법입니다. 컴포넌트를 재사용할때 상속을 많이 사용하지만 해당 클래스의 모든 것을 재사용해야 하는 불편함이 있습니다. 클래스의 일부만 확장하고 싶을 때는 믹스인을 사용합니다.
+- 믹스인/트레잇 : 클래스에 새로운 기능을 추가하기 위해, 필요한 메서드를 가지고 있는 작은 클래스들을 결합해 기능을 추가하는 방법을 말합니다.
+
+10.6.7 로그인과 세션 저장까지 순서
+- 유저가 서버에 로그인 요청을 보냅니다
+- 유저가 보낸 요청은 AuthController에 있으며 @UseGuards(LocalAuthGuard) 데코레이터가 붙어있습니다. 이에 LocalAuthGuard가 먼저 실행됩니다. Guard이므로 canActivate() 메서드가 구현되어 있으며, LoadAuthGuard는 AuthGuard('local')을 상속받았으므로 canAtivate() 메서드 내에서 부모의 canActivate()를 호출 하도록 super.canActivate()를 실행합니다.
+- super.canActivate()는 LocalStrategy의 validate() 메서드를 실행합니다. validate() 메서드에서는 유저의 email과 password 정보를 사용해 유효한 유저인지 확인합니다.
+- LocalStrategy의 validate() 메서드는 성공하면 true, 실패하면 401 에러를 반환합니다. LocalAuthGuard는 LocalStrategy에서 validate()의 반환값이 true이면 super.logIn()을 호출합니다.
+- super.logIn()은 SessionSerializer의 serializeUser()를 실행하며 세션에 유저 정보를 저장합니다.
+- 인증 및 세션 저장이 완료되면 login3() 메서드의 몸체가 실행되어 클라이언트에게 응답값을 전송합니다.
