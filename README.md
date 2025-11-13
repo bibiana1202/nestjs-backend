@@ -292,7 +292,7 @@ npm -D @types/passport-google-oauth20
 
 11.8 User 엔티티 파일 수정하기
 - 구글 로그인 시 회원 정보를 저장하는 로직
-- 
+  
 11.9 UserService에 구글 유저 검색 및 저장 메서드 추가하기
 - 이메일로 기존 가입 여부를 확인해 가입되어 있으면 유저정보를 반환하고, 아니면 회원 정보를 유저 테이블에 저장
   
@@ -301,3 +301,39 @@ npm -D @types/passport-google-oauth20
 
 11.11 GoogleAuthGuard에 세션을 사용하도록 변경하기
 - 로그인 시에만 구글 OAuth 요청을 하고 그 뒤로는 세션에 저장된 데이터로 인증을 확인
+
+---
+12장 파일 업로드 기능 구현하기
+
+12.1 프로젝트 생성 및 의존성 설치하기
+```
+npm i -D @types/multer
+```
+
+12.2 파일 업로드 API를 만들고 테스트하기
+- 파일 업로드는 POST 메소드로만 가능하며, Content-Type을 multipart/form-data로 해야
+- 인터셉터 : 클라이언트와 서버간의 요청과 응답 간에 로직을 추가하는 미들웨어
+- FileIntercepter() 는 클라이언트의 요청에 따라 파일명이 file인 파일이 있는지 확인
+- UploadedFile() 데코레이터는 핸들러 함수의 매개변수 데코레이터, 인수로 넘겨진 값중 file 객체를 지정해 꺼내는 역할
+- 텍스트 파일은 버퍼에 바이너리 값으로 저장되어 있습니다. toString('utf-8')을 사용해 읽을 수 있는 문자열로 변환
+
+12.3 업로드한 파일을 특정한 경로에 저장하기
+- FileIntercepter()에는 첫번째 인수로 폼필드의 이름, 두번째 인수에는 어디에 저장할지, 어떤 파일의 형식을 허용할지, 파일명은 변경할지, 크기는 얼마까지 허용할지 등의 옵션을 제공
+- 디스크에 파일을 저장해야 하므로 storage를 사용해야. 
+  - 디스크에 저장하는 diskStorage()
+    - 옵션으로 destination(문자열속성) : 파일이 저장될 장소를 지정
+    - filename(함수) : destination에 저장될 때의 파일명
+  - 메모리에 저장하는 memeoryStorage() -> 파일 속성 buffer
+
+12.4 정적 파일 서비스하기
+- 텍스트, 이미지, 동영상 같은 파일은 한번 저장되면 변경되지 않으므로 정적 파일 이라 부릅니다.
+```
+npm i @nestjs/serve-static
+```
+- ServeStaticModule.forRoot() 함수를 실행하면 정적 파일을 서비스 하는 ServeStaticModule이 초기화 됩니다. @Module 데코레이터 내의 import 옵션에 추가
+- rootPath 옵션은 업로드한 파일이 저장되어 있는 경로를 설정
+- serveRoot 옵션이 없으면 업로드한 파일에 loclahost:3000/{파일명} 으로 접근
+
+12.5 HTML 폼으로 업로드하기
+- useStaticAssets() 에 경로만 지정해주면 NestJS에서 정적 파일 서비스가 가능
+- useStaticAssests() 미들웨어는 익스프레스에 있기 때문에 NestExpressApplication 타입으로 app 인스턴스를 생성, 익스프레스 미들웨어를 사용하려면 app 인스턴스를 만들때 제네릭 타입으로 NestExpressApplicaion을 선언해야 함
